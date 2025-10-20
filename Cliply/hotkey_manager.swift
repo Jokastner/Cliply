@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import Carbon
 
-class HotKeyManager {
+class HotKeyManager: NSObject {
     static let shared = HotKeyManager()
     
     var clipboardManager: ClipboardManager?
@@ -10,12 +10,15 @@ class HotKeyManager {
     private var showHotKeyRef: EventHotKeyRef?
     private var eventHandler: EventHandlerRef?
     private var previousApp: NSRunningApplication?
+	private var historyWindow: NSWindow?
     
     // Double-tap detection for Cmd+C
     private var lastCmdCPressTime: Date?
     private let doubleTapInterval: TimeInterval = 0.5 // 500ms window
     
-    private init() {
+    private override init() {
+		super.init()
+		
         // Monitor Cmd+C globally
         NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             self?.handleKeyEvent(event)
@@ -98,11 +101,21 @@ class HotKeyManager {
         clipboardManager?.saveClipboardContent()
     }
     
-    @objc func showClipboardHistory() {
-        // Capture the currently active application before showing our window
-        previousApp = NSWorkspace.shared.frontmostApplication
+	@objc func showClipboardHistory() {
+		// Check if history window already exists and is visible
+		if let existingWindow = historyWindow, existingWindow.isVisible {
+			// Bring existing window to front instead of creating new one
+			existingWindow.makeKeyAndOrderFront(nil)
+			NSApp.activate(ignoringOtherApps: true)
+			return
+		}
+		
+		// Capture the currently active application before showing our window
+		previousApp = NSWorkspace.shared.frontmostApplication
         
-        DispatchQueue.main.async {
+		DispatchQueue.main.async { [weak self] in
+			guard let self = self else { return }
+			
             let window = NSWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 600, height: 500),
                 styleMask: [.titled, .closable, .resizable],
@@ -113,9 +126,16 @@ class HotKeyManager {
             window.center()
             window.contentView = NSHostingView(rootView: ClipboardHistoryView(hotKeyManager: self))
             window.isReleasedWhenClosed = false
-            window.restorationClass = nil
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+			window.restorationClass = nil
+			
+			// Set delegate to track when window closes
+			window.delegate = self
+			
+			// Store reference to window
+			self.historyWindow = window
+			
+			window.makeKeyAndOrderFront(nil)
+			NSApp.activate(ignoringOtherApps: true)
         }
     }
     
@@ -129,4 +149,14 @@ class HotKeyManager {
     deinit {
         unregisterHotKeys()
     }
+}
+
+// MARK: - NSWindowDelegate
+extension HotKeyManager: NSWindowDelegate {
+	func windowWillClose(_ notification: Notification) {
+		// Clear the window reference when it closes
+		if let window = notification.object as? NSWindow, window == historyWindow {
+			historyWindow = nil
+		}
+	}
 }

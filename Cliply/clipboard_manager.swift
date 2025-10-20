@@ -48,9 +48,9 @@ class ClipboardManager: ObservableObject {
             return
         }
         // Return focus to the previous app and give it time to focus
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                HotKeyManager.shared.returnToPreviousApp()
-            }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            HotKeyManager.shared.returnToPreviousApp()
+        }
         
         // Simulate paste command
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
@@ -120,6 +120,6 @@ struct ClipboardItem: Identifiable, Codable, Equatable, Hashable {
     }
     
     func hash(into hasher: inout Hasher) {
-         hasher.combine(id)
-     }
+        hasher.combine(id)
+    }
 }
