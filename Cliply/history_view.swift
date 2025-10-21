@@ -59,6 +59,10 @@ struct ClipboardHistoryView: View {
 					ForEach(filteredHistory) { item in
 						HStack{
 							ClipboardItemRow(item: item)
+								.tag(item)
+								.onTapGesture(count: 2) {
+									pasteItem(item)
+								}
 								.contextMenu {
 									Button("Paste") {
 										pasteItem(item)
@@ -79,12 +83,6 @@ struct ClipboardHistoryView: View {
 							}
 							.buttonStyle(.plain)
 						}
-						.tag(item)
-						.onTapGesture(count: 2) {
-							pasteItem(item)
-						}
-						
-						
 					}
 				}
 				.listStyle(.inset)
@@ -121,15 +119,14 @@ struct ClipboardHistoryView: View {
 	}
 	
 	private func pasteItem(_ item: ClipboardItem) {
+		
 		clipboardManager.pasteContent(item)
+		
 		// Close the window
 		if let window = NSApp.keyWindow {
 			window.close()
 		}
-		// Return focus to the previous app and give it time to focus
-		DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-			hotKeyManager?.returnToPreviousApp()
-		}
+		
 	}
 	
 	private func copyItem(_ item: ClipboardItem) {
@@ -162,6 +159,14 @@ struct ClipboardItemRow: View {
 				.font(.system(.body, design: .default))
 			
 			HStack {
+				// Content type badge
+				Text(item.contentType.displayName)
+					.font(.caption2)
+					.padding(.horizontal, 6)
+					.padding(.vertical, 2)
+					.background(item.contentType.badgeColor)
+					.cornerRadius(4)
+				
 				Text(item.formattedTimestamp)
 					.font(.caption)
 					.foregroundColor(.secondary)

@@ -13,12 +13,11 @@ struct CliplyApp: App {
 	@NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 	
 	var body: some Scene {
-			WindowGroup("Setup", id: "setup") {
-				SettingsView()
-			}
-			.windowResizability(.contentSize)
-			.defaultPosition(.center)
-		
+		WindowGroup("Setup", id: "setup") {
+			SettingsView()
+		}
+		.defaultSize(width: 500, height: 400)
+		.defaultPosition(.center)
 	}
 }
 
@@ -44,18 +43,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 		// Register hotkeys with saved preferences
 		hotKeyManager?.registerHotKeys()
 		
-		/*UserDefaults.standard.removeObject(forKey: "hasCompletedSetup")
-		 print(UserDefaults.standard.string(forKey: "hasCompletedSetup") ?? "nil")
-		 
-		 // Check if first launch
-		 if !UserDefaults.standard.bool(forKey: "hasCompletedSetup") {
-		 DispatchQueue.main.async {
-		 NSApp.sendAction(Selector(("openSettings:")), to: nil, from: nil)
-		 }
-		 } else {
-		 // Register hotkeys with saved preferences
-		 hotKeyManager?.registerHotKeys()
-		 }*/
 	}
 	
 	func setupMenuBar() {
@@ -109,33 +96,33 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 	
 	@objc func openSettings() {
 		// Check if settings window already exists and is visible
-				if let existingWindow = settingsWindow, existingWindow.isVisible {
-					// Bring existing window to front instead of creating new one
-					existingWindow.makeKeyAndOrderFront(nil)
-					NSApp.activate(ignoringOtherApps: true)
-					return
-				}
-				
-				// Reuse the setup view as settings/preferences
-				let window = NSWindow(
-					contentRect: NSRect(x: 0, y: 0, width: 500, height: 400),
-					styleMask: [.titled, .closable],
-					backing: .buffered,
-					defer: false
-				)
-				window.title = "Preferences"
-				window.center()
-				window.contentView = NSHostingView(rootView: SettingsView())
-				window.isReleasedWhenClosed = false
-				
-				// Set delegate to track when window closes
-				window.delegate = self
-				
-				// Store reference to window
-				settingsWindow = window
-				
-				window.makeKeyAndOrderFront(nil)
-				NSApp.activate(ignoringOtherApps: true)
+		if let existingWindow = settingsWindow, existingWindow.isVisible {
+			// Bring existing window to front instead of creating new one
+			existingWindow.makeKeyAndOrderFront(nil)
+			NSApp.activate(ignoringOtherApps: true)
+			return
+		}
+		
+		// Reuse the setup view as settings/preferences
+		let window = NSWindow(
+			contentRect: NSRect(x: 0, y: 0, width: 500, height: 400),
+			styleMask: [.titled, .closable],
+			backing: .buffered,
+			defer: false
+		)
+		window.title = "Preferences"
+		window.center()
+		window.contentView = NSHostingView(rootView: SettingsView())
+		window.isReleasedWhenClosed = false
+		
+		// Set delegate to track when window closes
+		window.delegate = self
+		
+		// Store reference to window
+		settingsWindow = window
+		
+		window.makeKeyAndOrderFront(nil)
+		NSApp.activate(ignoringOtherApps: true)
 	}
 	
 	@objc func showHistory() {
