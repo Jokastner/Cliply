@@ -3,6 +3,8 @@ import SwiftUI
 struct ClipboardHistoryView: View {
 	@ObservedObject var clipboardManager = ClipboardManager.shared
 	@State private var searchText = ""
+	@FocusState private var focusedIndex: Int?
+	@State private var selectedIndex: Int = 0
 	@State private var selectedItem: ClipboardItem?
 	@State private var hasAccessibilityPermission = AXIsProcessTrusted()
 	@Environment(\.dismiss) private var dismiss
@@ -55,37 +57,83 @@ struct ClipboardHistoryView: View {
 				}
 				.frame(maxWidth: .infinity, maxHeight: .infinity)
 			} else {
-				List(selection: $selectedItem) {
-					ForEach(filteredHistory) { item in
-						HStack{
-							ClipboardItemRow(item: item)
-								.tag(item)
-								.onTapGesture(count: 2) {
-									pasteItem(item)
-								}
-								.contextMenu {
-									Button("Paste") {
+				
+				ScrollViewReader { proxy in
+					
+					List {
+						ForEach(filteredHistory.indices, id: \.self) { index in
+							let item=filteredHistory[index]
+							HStack{
+								ClipboardItemRow(item: item)
+									.tag(item)
+									.onTapGesture(count: 2) {
 										pasteItem(item)
 									}
-									Button("Copy") {
-										copyItem(item)
+									.onTapGesture {
+										focusedIndex=index
+										selectedItem=item
 									}
-									Divider()
-									Button("Delete", role: .destructive) {
-										clipboardManager.deleteItem(item)
+									.contextMenu {
+										Button("Paste") {
+											pasteItem(item)
+										}
+										Button("Copy") {
+											copyItem(item)
+										}
+										Divider()
+										Button("Delete", role: .destructive) {
+											clipboardManager.deleteItem(item)
+										}
 									}
+								
+								
+								Button(action: { clipboardManager.deleteItem(item) }) {
+									Image(systemName: "xmark.circle.fill")
+										.foregroundColor(.red)
 								}
-							
-							
-							Button(action: { clipboardManager.deleteItem(item) }) {
-								Image(systemName: "xmark.circle.fill")
-									.foregroundColor(.red)
+								.buttonStyle(.plain)
 							}
-							.buttonStyle(.plain)
+							.id(index)
+							.focusable()
+							.focused($focusedIndex,equals: index)
+							.onKeyPress { event in
+								if event.characters == "\u{8}" || event.characters == "\u{7F}" {
+									clipboardManager.deleteItem(item)
+									return .handled
+								}
+								switch event.key{
+								case .upArrow:
+									selectedIndex = max(0, selectedIndex - 1)
+									selectedItem=filteredHistory[selectedIndex]
+									focusedIndex = selectedIndex
+									return .handled
+								case .downArrow:
+									selectedIndex = min(filteredHistory.count - 1, selectedIndex + 1)
+									selectedItem=filteredHistory[selectedIndex]
+									focusedIndex = selectedIndex
+									return .handled
+								case .return:
+									pasteItem(item)
+									return .handled
+								default:
+									return .ignored
+								}
+							}
+							
 						}
 					}
+					.listStyle(.inset)
+					.onAppear(){focusedIndex=0}
+					.onChange(of: focusedIndex) { newIndex, oldIndex in
+						if let index = newIndex {
+							withAnimation {
+								proxy.scrollTo(index, anchor: .center)
+							}
+						}
+					}
+					
 				}
-				.listStyle(.inset)
+				
 			}
 			
 			Divider()
