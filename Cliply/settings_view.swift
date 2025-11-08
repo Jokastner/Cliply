@@ -104,7 +104,7 @@ struct AboutView: View {
                 Image(systemName: "doc.on.clipboard.fill")
                     .font(.system(size: 20))
                     .foregroundColor(.blue)
-                Text("Cliply")
+                Text("Clipli")
                     .font(.title)
                     .fontWeight(.bold)
                 Text("Version 1.0.0")

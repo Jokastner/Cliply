@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clipboard Manager - Support & Features</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .tagline {
+            font-size: 1.3em;
+            opacity: 0.95;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .demo-container {
+            background: #f5f7fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .screenshot-placeholder {
+            background: linear-gradient(45deg, #e0e7ff 25%, transparent 25%, transparent 75%, #e0e7ff 75%, #e0e7ff),
+                        linear-gradient(45deg, #e0e7ff 25%, transparent 25%, transparent 75%, #e0e7ff 75%, #e0e7ff);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 18px 50px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-size: 1.2em;
+            font-weight: 600;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.6);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%);
+            padding: 30px;
+            border-radius: 15px;
+            transition: transform 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .feature-card h3 {
+            color: #667eea;
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .feature-card p {
+            color: #555;
+            line-height: 1.8;
+        }
+
+        .feedback-form {
+            max-width: 600px;
+            margin: 30px auto 0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e7ff;
+            border-radius: 10px;
+            font-size: 1em;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 150px;
+        }
+
+        .char-count {
+            text-align: right;
+            font-size: 0.9em;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .submit-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.6);
+        }
+
+        .submit-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .email-option {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px dashed #e0e7ff;
+        }
+
+        .email-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .email-link:hover {
+            text-decoration: underline;
+        }
+
+        .success-message {
+            background: #10b981;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: white;
+            opacity: 0.9;
+        }
+
+        .kbd {
+            background: #f5f7fa;
+            border: 2px solid #e0e7ff;
+            border-radius: 5px;
+            padding: 3px 8px;
+            font-family: monospace;
+            font-weight: 600;
+            color: #667eea;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .section {
+                padding: 25px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>📋 Clipboard Manager</h1>
+            <p class="tagline">Your powerful clipboard history manager for macOS</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Summary Section -->
+        <section class="section">
+            <h2>What is Clipboard Manager?</h2>
+            <p style="font-size: 1.1em; margin-bottom: 20px;">
+                Clipboard Manager is a lightweight, menu bar application for macOS that saves your clipboard history automatically. 
+                Never lose copied text again! Access your clipboard history instantly with customizable hotkeys, and paste any 
+                previously copied item with full formatting preserved.
+            </p>
+
+            <div class="demo-container">
+                <h3 style="margin-bottom: 20px; color: #667eea;">How It Works</h3>
+                <div class="screenshot-placeholder">
+                    📹 Demo Video / Screenshot
+                    <br>
+                    <small style="display: block; margin-top: 10px; opacity: 0.7;">
+                        (Replace with actual screen recording showing the app in action)
+                    </small>
+                </div>
+                <ol style="text-align: left; max-width: 600px; margin: 20px auto; line-height: 2;">
+                    <li><strong>Copy anything</strong> - Text, links, formatted content</li>
+                    <li><strong>Double-tap <span class="kbd">⌘ C</span></strong> to save to history</li>
+                    <li><strong>Press <span class="kbd">⌘ ^ V</span></strong> to open history window</li>
+                    <li><strong>Select and paste</strong> - Use arrow keys or click</li>
+                </ol>
+                <a href="#" class="cta-button">📦 Download on App Store</a>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="section">
+            <h2>✨ Features</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⌨️</div>
+                    <h3>Smart Hotkeys</h3>
+                    <p>
+                        Save clipboard with <span class="kbd">⌘ C ⌘ C</span> (double-tap Command+C). 
+                        Open history with <span class="kbd">⌘ ^ V</span>. Fully customizable hotkeys 
+                        to match your workflow. Works system-wide in any application.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🎹</div>
+                    <h3>Keyboard Navigation</h3>
+                    <p>
+                        Navigate your clipboard history without touching the mouse. Use <span class="kbd">↑</span> 
+                        <span class="kbd">↓</span> arrow keys to browse, <span class="kbd">Enter</span> to paste, 
+                        and <span class="kbd">Delete</span> to remove items. Lightning-fast workflow.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Privacy First</h3>
+                    <p>
+                        All clipboard data stays on your Mac - nothing is sent to the cloud. No analytics, 
+                        no tracking, no data collection. Your clipboard history is yours alone. 
+                        Complete control over your data.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3>Format Preservation</h3>
+                    <p>
+                        Supports plain text, rich text (RTF), and HTML content. Copy styled text, 
+                        hyperlinks, or formatted documents - everything pastes back with original 
+                        formatting intact.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Quick Search</h3>
+                    <p>
+                        Instantly find any clipboard item with built-in search. Filter through 
+                        hundreds of items in milliseconds. Search works across all your saved 
+                        clipboard content.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Lightweight & Fast</h3>
+                    <p>
+                        Runs silently in the menu bar with minimal memory footprint. No dock icon, 
+                        no distractions. Always ready when you need it. Stores up to 100 items 
+                        automatically.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Feedback Section -->
+        <section class="section">
+            <h2>💬 Feedback & Support</h2>
+            <p style="text-align: center; margin-bottom: 30px; font-size: 1.1em;">
+                We'd love to hear from you! Share your thoughts, report bugs, or request features.
+            </p>
+
+            <div class="success-message" id="successMessage">
+                ✓ Thank you! Your feedback has been received.
+            </div>
+
+            <form class="feedback-form" id="feedbackForm">
+                <div class="form-group">
+                    <label for="name">Name (optional)</label>
+                    <input type="text" id="name" placeholder="Your name">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email (optional)</label>
+                    <input type="email" id="email" placeholder="your.email@example.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="message">Message *</label>
+                    <textarea 
+                        id="message" 
+                        placeholder="Share your feedback, bug reports, or feature requests..." 
+                        maxlength="1000"
+                        required
+                    ></textarea>
+                    <div class="char-count">
+                        <span id="charCount">0</span> / 1000 characters
+                    </div>
+                </div>
+
+                <div style="text-align: center;">
+                    <button type="submit" class="submit-button">Send Feedback</button>
+                </div>
+
+                <div class="email-option">
+                    <p>Or email us directly at</p>
+                    <a href="mailto:support@clipboardmanager.app" class="email-link">
+                        support@clipboardmanager.app
+                    </a>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Clipboard Manager. Made with ❤️ for Mac users.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Character counter
+        const messageInput = document.getElementById('message');
+        const charCount = document.getElementById('charCount');
+
+        messageInput.addEventListener('input', function() {
+            charCount.textContent = this.value.length;
+        });
+
+        // Form submission
+        const form = document.getElementById('feedbackForm');
+        const successMessage = document.getElementById('successMessage');
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                message: document.getElementById('message').value
+            };
+
+            // Here you would typically send to a backend
+            console.log('Feedback submitted:', formData);
+
+            // Show success message
+            successMessage.classList.add('show');
+            
+            // Reset form
+            form.reset();
+            charCount.textContent = '0';
+
+            // Hide success message after 5 seconds
+            setTimeout(() => {
+                successMessage.classList.remove('show');
+            }, 5000);
+
+            // In production, you'd send this to your backend:
+            // fetch('/api/feedback', {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json' },
+            //     body: JSON.stringify(formData)
+            // });
+        });
+    </script>
+</body>
+</html>

@@ -51,10 +51,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 			// Try to load custom icon first, fallback to system icon
 			if let customIcon = NSImage(named: "MenuBarIcon") {
 				customIcon.isTemplate = true // Makes it adapt to light/dark mode
+				customIcon.accessibilityDescription = "Clipli! Manage your clipboard with ease."
 				button.image = customIcon
 			} else {
 				// Fallback to system icon
-				button.image = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Cliply! Manage your clipboard with ease.")
+				button.image = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Clipli! Manage your clipboard with ease.")
 			}
 			
 			// Delay animation until menu bar is fully rendered

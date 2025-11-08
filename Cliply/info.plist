@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleName</key>
-	<string>Cliply</string>
+	<string>Clipli</string>
 	<key>CFBundleDisplayName</key>
-	<string>Cliply</string>
+	<string>Clipli</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.joli.cliply</string>
+	<string>com.jolikastner.clipli</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>CFBundleShortVersionString</key>

@@ -47,7 +47,9 @@ class ClipboardManager: ObservableObject {
 		}
 		
 		let item = ClipboardItem(content: finalContent, timestamp: Date(), contentType: contentType)
-		history.insert(item, at: 0)
+		// Always insert after all pinned items
+		let pinnedCount = history.filter { $0.isPinned }.count
+		history.insert(item, at: pinnedCount)
 		
 		// Limit history size
 		if history.count > maxHistoryItems {
@@ -120,6 +122,67 @@ class ClipboardManager: ObservableObject {
 		saveHistory()
 	}
 	
+	func moveItemUp(_ item: ClipboardItem) -> Int? {
+		guard let index = history.firstIndex(where: { $0.id == item.id }),
+			  index > 0 else { return nil }
+		
+		// Pinned items can only move among other pinned items
+		// Unpinned items can only move among other unpinned items
+		let previousItem = history[index - 1]
+		if previousItem.isPinned != item.isPinned {
+			return nil
+		}
+		
+		history.swapAt(index, index - 1)
+		saveHistory()
+		return index - 1
+	}
+	
+	func moveItemDown(_ item: ClipboardItem) -> Int? {
+		guard let index = history.firstIndex(where: { $0.id == item.id }),
+			  index < history.count - 1 else { return nil }
+		
+		// Pinned items can only move among other pinned items
+		// Unpinned items can only move among other unpinned items
+		let nextItem = history[index + 1]
+		if nextItem.isPinned != item.isPinned {
+			return nil
+		}
+		
+		history.swapAt(index, index + 1)
+		saveHistory()
+		return index + 1
+	}
+	
+	func togglePin(_ item: ClipboardItem) -> Int? {
+		guard let index = history.firstIndex(where: { $0.id == item.id }) else { return nil }
+		
+		// Create updated item with toggled pin status
+		let updatedItem = ClipboardItem(
+			content: item.content,
+			timestamp: item.timestamp,
+			contentType: item.contentType,
+			isPinned: !item.isPinned
+		)
+		
+		// Remove the item from its current position
+		history.remove(at: index)
+		
+		if updatedItem.isPinned {
+			// When pinning, move to top (after the last previously pinned item)
+			let pinnedCount = history.filter { $0.isPinned }.count
+			history.insert(updatedItem, at: pinnedCount)
+			saveHistory()
+			return pinnedCount
+		} else {
+			// When unpinning, move to top of unpinned items (after all pinned items)
+			let pinnedCount = history.filter { $0.isPinned }.count
+			history.insert(updatedItem, at: pinnedCount)
+			saveHistory()
+			return pinnedCount
+		}
+	}
+	
 	private func saveHistory() {
 		if let encoded = try? JSONEncoder().encode(history) {
 			UserDefaults.standard.set(encoded, forKey: "clipboardHistory")
@@ -167,12 +230,14 @@ struct ClipboardItem: Identifiable, Codable, Equatable, Hashable {
 	let content: String
 	let timestamp: Date
 	let contentType: ClipboardContentType
+	var isPinned: Bool
 	
-	init(content: String, timestamp: Date, contentType: ClipboardContentType = .plainText) {
+	init(content: String, timestamp: Date, contentType: ClipboardContentType = .plainText, isPinned: Bool = false) {
 		self.id = UUID()
 		self.content = content
 		self.timestamp = timestamp
 		self.contentType = contentType
+		self.isPinned = isPinned
 	}
 	
 	var preview: String {
