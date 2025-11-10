@@ -147,21 +147,22 @@ struct ClipboardHistoryView: View {
 									.onTapGesture {
 										focusedIndex=index
 										selectedItem=item
+										selectedIndex=index
 									}
 									.contextMenu {
-										Button("Paste            (⌥V)") {
+										Button("Paste            ") {
 											pasteItem(item)
 										}
 										Button(action: {copyItem(item)}) {
 											HStack {
-												Text("Copy             (⌥C)")
+												Text("Copy             ")
 												Spacer()
 												//Text("⌥C")
-													//.foregroundColor(.secondary) // Optional: makes the shortcut hint look standard
+												//.foregroundColor(.secondary) // Optional: makes the shortcut hint look standard
 											}
 										}
 										Divider()
-										Button(item.isPinned ? "Unpin            (⌥P)" : "Pin                 (⌥P)"){
+										Button(item.isPinned ? "Unpin            " : "Pin                 "){
 											if clipboardManager.togglePin(item) != nil {
 												if let newFilteredIndex = filteredHistory.firstIndex(where: { $0.id == item.id }) {
 													focusedIndex = newFilteredIndex
@@ -233,6 +234,7 @@ struct ClipboardHistoryView: View {
 										}
 									}
 									
+									
 									switch event.key {
 									case .upArrow:
 										Task { @MainActor in
@@ -256,7 +258,7 @@ struct ClipboardHistoryView: View {
 											}
 										}
 										return .handled
-									case .space:
+									case .return:
 										Task { @MainActor in
 											if clipboardManager.togglePin(item) != nil {
 												if let newFilteredIndex = filteredHistory.firstIndex(where: { $0.id == item.id }) {
@@ -299,7 +301,7 @@ struct ClipboardHistoryView: View {
 					.onPreferenceChange(VisibleItemFramePreference.self) { frames in
 						visibleItemFrames = frames
 					}
-					.onChange(of: focusedIndex) { newIndex, oldIndex in
+					.onChange(of: focusedIndex) { oldIndex, newIndex in
 						if let index = newIndex {
 							// Check if the focused item is visible
 							// SwiftUI List only renders visible items, so if the item's frame
@@ -309,7 +311,7 @@ struct ClipboardHistoryView: View {
 								// Frame exists, check if it's within reasonable viewport bounds
 								// For List items, frames are relative to the scroll position
 								// If minY is negative or very large, the item is off-screen
-								if itemFrame.minY >= -100 && itemFrame.maxY <= 2000 {
+								if itemFrame.minY >= 10 && itemFrame.minY <= 460 {
 									// Item appears to be visible, don't scroll
 									return
 								}
@@ -367,9 +369,8 @@ struct ClipboardHistoryView: View {
 	}
 	
 	private func copyItem(_ item: ClipboardItem) {
-		let pasteboard = NSPasteboard.general
-		pasteboard.clearContents()
-		pasteboard.setString(item.content, forType: .string)
+		// Use the same paste logic to copy to clipboard
+		clipboardManager.pasteContent(item)
 	}
 	
 	private func showClearConfirmation() {
@@ -392,12 +393,38 @@ struct ClipboardItemRow: View {
 	let isSelected: Bool
 	
 	var body: some View {
-		
 		VStack(alignment: .leading, spacing: 6) {
-			Text(item.preview)
-				.lineLimit(3)
-				.font(.system(.body, design: .default))
-				.background(isSelected ? Color.blue.opacity(0.1) : Color.clear)
+			// Display content based on type
+			switch item.contentType {
+			case .image, .tiff:
+				// Show image thumbnail
+				if let rawData = item.rawData,
+				   let nsImage = NSImage(data: rawData) {
+					Image(nsImage: nsImage)
+						.resizable()
+						.aspectRatio(contentMode: .fit)
+						.frame(maxWidth: 200, maxHeight: 80)
+						.cornerRadius(6)
+						.shadow(radius: 2)
+						.overlay(
+							RoundedRectangle(cornerRadius: 6)
+								.stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+						)
+				} else {
+					Text(item.preview)
+						.lineLimit(3)
+						.font(.system(.body, design: .default))
+						.foregroundColor(.secondary)
+				}
+			case .pdf, .fileURL:
+				Text(item.preview)
+					.lineLimit(2)
+					.font(.system(.body, design: .default))
+			default:
+				Text(item.preview)
+					.lineLimit(3)
+					.font(.system(.body, design: .default))
+			}
 			
 			HStack {
 				// Content type badge
@@ -414,9 +441,18 @@ struct ClipboardItemRow: View {
 				
 				Spacer()
 				
-				Text("\(item.content.count) characters")
-					.font(.caption)
-					.foregroundColor(.secondary)
+				// Only show character count for plain text
+				if let charCount = item.characterCount {
+					Text("\(charCount) characters")
+						.font(.caption)
+						.foregroundColor(.secondary)
+				} else if let rawData = item.rawData {
+					// Show data size for non-text content
+					let size = ByteCountFormatter.string(fromByteCount: Int64(rawData.count), countStyle: .file)
+					Text(size)
+						.font(.caption)
+						.foregroundColor(.secondary)
+				}
 				
 				// Keyboard shortcut indicator (for first 10 items)
 				if let shortcut = shortcutIndex, shortcut < 10 {
@@ -430,6 +466,8 @@ struct ClipboardItemRow: View {
 				}
 			}
 		}
+		//.background(isSelected ? Color.blue.opacity(0.1) : Color.clear)
+		.padding(.vertical, 4)
 	}
 }
 
