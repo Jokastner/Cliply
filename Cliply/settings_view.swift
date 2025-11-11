@@ -243,6 +243,8 @@ struct HotKeyRow: View {
                 .foregroundColor(.secondary)
         }
     }
+	
+	
 }
 
 

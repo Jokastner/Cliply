@@ -13,11 +13,15 @@ struct ClipboardHistoryView: View {
 	@State private var searchText = ""
 	@FocusState private var focusedIndex: Int?
 	@State private var selectedIndex: Int = 0
-	@State private var selectedItem: ClipboardItem?
 	@State private var hasAccessibilityPermission = AXIsProcessTrusted()
 	@State private var visibleItemFrames: [Int: CGRect] = [:]
 	@Environment(\.dismiss) private var dismiss
 	var hotKeyManager: HotKeyManager?
+	
+	private enum MoveDirection {
+		case up
+		case down
+	}
 	
 	var filteredHistory: [ClipboardItem] {
 		if searchText.isEmpty {
@@ -47,18 +51,15 @@ struct ClipboardHistoryView: View {
 			}
 			.padding(12)
 			.background(Color(NSColor.controlBackgroundColor))
-			.onKeyPress { event in
-				// Handle Option+number (0-9) for quick paste at view level
-				if event.modifiers.contains(.option),
-				   let char = event.characters.first,
-				   let number = Int(String(char)),
-				   number >= 0 && number <= 9,
-				   number < filteredHistory.count {
-					pasteItem(filteredHistory[number])
-					return .handled
+			.focused($focusedIndex,equals: -1)
+			.onKeyPress(.downArrow, action: {
+				if filteredHistory.isEmpty {
+					return .ignored
 				}
-				return .ignored
-			}
+				selectedIndex=0
+				focusedIndex=0
+				return .handled
+			})
 			
 			Divider()
 			
@@ -84,119 +85,43 @@ struct ClipboardHistoryView: View {
 					List {
 						ForEach(filteredHistory.indices, id: \.self) { index in
 							let item=filteredHistory[index]
+							let disableMoveUp = index == 0 || (index > 0 && filteredHistory[index - 1].isPinned != item.isPinned)
+							let disableMoveDown = index == filteredHistory.count - 1 || (index < filteredHistory.count - 1 && filteredHistory[index + 1].isPinned != item.isPinned)
+							
 							HStack(spacing: 16) {
 								// Move and pin controls
-								VStack(spacing: 2) {
-									Button(action: {
-										if clipboardManager.moveItemUp(item) != nil {
-											// Find the item's new position in filtered history
-											if let newFilteredIndex = filteredHistory.firstIndex(where: { $0.id == item.id }) {
-												focusedIndex = newFilteredIndex
-												selectedIndex = newFilteredIndex
-												selectedItem = filteredHistory[newFilteredIndex]
-											}
-										}
-									}) {
-										Image(systemName: "arrow.up")
-											.font(.system(size: 10, weight: .heavy))
-									}
-									.buttonStyle(.plain)
-									.disabled(index == 0 || (index > 0 && filteredHistory[index - 1].isPinned != item.isPinned))
-									.foregroundColor(index == 0 || (index > 0 && filteredHistory[index - 1].isPinned != item.isPinned) ? .gray.opacity(0.3) : .primary)
-									
-									Button(action: {
-										if clipboardManager.togglePin(item) != nil {
-											// Update focus to follow the pinned/unpinned item
-											if let newFilteredIndex = filteredHistory.firstIndex(where: { $0.id == item.id }) {
-												focusedIndex = newFilteredIndex
-												selectedIndex = newFilteredIndex
-												selectedItem = filteredHistory[newFilteredIndex]
-											}
-										}
-									}) {
-										Image(systemName: item.isPinned ? "pin.fill" : "pin")
-											.font(.system(size: 12))
-									}
-									.buttonStyle(.plain)
-									.foregroundColor(item.isPinned ? .orange : .primary)
-									
-									Button(action: {
-										if clipboardManager.moveItemDown(item) != nil {
-											// Find the item's new position in filtered history
-											if let newFilteredIndex = filteredHistory.firstIndex(where: { $0.id == item.id }) {
-												focusedIndex = newFilteredIndex
-												selectedIndex = newFilteredIndex
-												selectedItem = filteredHistory[newFilteredIndex]
-											}
-										}
-									}) {
-										Image(systemName: "arrow.down")
-											.font(.system(size: 10,weight: .heavy))
-									}
-									.buttonStyle(.plain)
-									.disabled(index == filteredHistory.count - 1 || (index < filteredHistory.count - 1 && filteredHistory[index + 1].isPinned != item.isPinned))
-									.foregroundColor(index == filteredHistory.count - 1 || (index < filteredHistory.count - 1 && filteredHistory[index + 1].isPinned != item.isPinned) ? .gray.opacity(0.3) : .primary)
-								}
-								.frame(width: 20)
+								HistoryItemControlColumn(
+									item: item,
+									isMoveUpDisabled: disableMoveUp,
+									isMoveDownDisabled: disableMoveDown,
+									onMoveUp: { handleMoveItem(.up, item:item) },
+									onMoveDown: { handleMoveItem(.down, item:item) },
+									onTogglePin: { handleTogglePin(item) }
+								)
 								
-								ClipboardItemRow(item: item, shortcutIndex: index < 10 ? index : nil, isSelected: selectedItem==item)
+								ClipboardItemRow(item: item, shortcutIndex: index < 10 ? index : nil, isSelected: selectedIndex==index)
 									.tag(item)
 									.onTapGesture(count: 2) {
 										pasteItem(item)
 									}
 									.onTapGesture {
-										focusedIndex=index
-										selectedItem=item
-										selectedIndex=index
+										updateSelection(item)
 									}
 									.contextMenu {
-										Button("Paste            ") {
-											pasteItem(item)
-										}
-										Button(action: {copyItem(item)}) {
-											HStack {
-												Text("Copy             ")
-												Spacer()
-												//Text("⌥C")
-												//.foregroundColor(.secondary) // Optional: makes the shortcut hint look standard
-											}
-										}
-										Divider()
-										Button(item.isPinned ? "Unpin            " : "Pin                 "){
-											if clipboardManager.togglePin(item) != nil {
-												if let newFilteredIndex = filteredHistory.firstIndex(where: { $0.id == item.id }) {
-													focusedIndex = newFilteredIndex
-													selectedIndex = newFilteredIndex
-													selectedItem = filteredHistory[newFilteredIndex]
-												}
-											}
-										}
-										.disabled(index>9)
-										
-										Divider()
-										Button("Move Up       (⌥↑)"){
-											if clipboardManager.moveItemUp(item) != nil {
-												if let newFilteredIndex = filteredHistory.firstIndex(where: { $0.id == item.id }) {
-													focusedIndex = newFilteredIndex
-													selectedIndex = newFilteredIndex
-													selectedItem = filteredHistory[newFilteredIndex]
-												}
-											}
-										}
-										.disabled(index == 0 || (index > 0 && filteredHistory[index - 1].isPinned != item.isPinned))
-										Button("Move Down  (⌥↓)") {
-											if clipboardManager.moveItemDown(item) != nil {
-												if let newFilteredIndex = filteredHistory.firstIndex(where: { $0.id == item.id }) {
-													focusedIndex = newFilteredIndex
-													selectedIndex = newFilteredIndex
-													selectedItem = filteredHistory[newFilteredIndex]
-												}
-											}}
-										.disabled(index == filteredHistory.count - 1 || (index < filteredHistory.count - 1 && filteredHistory[index + 1].isPinned != item.isPinned))
-										Divider()
-										Button("Delete            (Del)", role: .destructive) {
-											clipboardManager.deleteItem(item)
-										}
+										HistoryItemContextMenu(
+											item: item,
+											disablePinShortcut: index > 9,
+											disableMoveUp: disableMoveUp,
+											disableMoveDown: disableMoveDown,
+											actions: .init(
+												paste: { pasteItem(item) },
+												copy: { copyItem(item) },
+												togglePin: { handleTogglePin(item) },
+												moveUp: { handleMoveItem(.up, item: item)},
+												moveDown: { handleMoveItem(.down, item: item) },
+												delete:{ clipboardManager.deleteItem(item) }
+											)
+										)
 									}
 								
 								Spacer()
@@ -213,96 +138,21 @@ struct ClipboardHistoryView: View {
 										)
 								}
 							)
-							.onKeyPress { event in
-								if event.characters == "\u{8}" || event.characters == "\u{7F}" {
-									Task { @MainActor in
-										clipboardManager.deleteItem(item)
-									}
-									return .handled
-								}
-								
-								// Handle Option+number (0-9) for quick paste
-								if event.modifiers.contains(.option) {
-									// Check for number keys 0-9
-									if let char = event.characters.first,
-									   let number = Int(String(char)),
-									   number >= 0 && number <= 9 {
-										// Paste item at position number (0-9)
-										if number < filteredHistory.count {
-											pasteItem(filteredHistory[number])
-											return .handled
-										}
-									}
-									
-									
-									switch event.key {
-									case .upArrow:
-										Task { @MainActor in
-											if clipboardManager.moveItemUp(item) != nil {
-												if let newFilteredIndex = filteredHistory.firstIndex(where: { $0.id == item.id }) {
-													focusedIndex = newFilteredIndex
-													selectedIndex = newFilteredIndex
-													selectedItem = filteredHistory[newFilteredIndex]
-												}
-											}
-										}
-										return .handled
-									case .downArrow:
-										Task { @MainActor in
-											if clipboardManager.moveItemDown(item) != nil {
-												if let newFilteredIndex = filteredHistory.firstIndex(where: { $0.id == item.id }) {
-													focusedIndex = newFilteredIndex
-													selectedIndex = newFilteredIndex
-													selectedItem = filteredHistory[newFilteredIndex]
-												}
-											}
-										}
-										return .handled
-									case .return:
-										Task { @MainActor in
-											if clipboardManager.togglePin(item) != nil {
-												if let newFilteredIndex = filteredHistory.firstIndex(where: { $0.id == item.id }) {
-													focusedIndex = newFilteredIndex
-													selectedIndex = newFilteredIndex
-													selectedItem = filteredHistory[newFilteredIndex]
-												}
-											}
-										}
-										return .handled
-									default:
-										break
-									}
-								}
-								
-								switch event.key{
-								case .upArrow:
-									selectedIndex = max(0, selectedIndex - 1)
-									selectedItem=filteredHistory[selectedIndex]
-									focusedIndex = selectedIndex
-									return .handled
-								case .downArrow:
-									selectedIndex = min(filteredHistory.count - 1, selectedIndex + 1)
-									selectedItem=filteredHistory[selectedIndex]
-									focusedIndex = selectedIndex
-									return .handled
-								case .return:
-									pasteItem(item)
-									return .handled
-								default:
-									return .ignored
-								}
-							}
 							
 						}
 					}
 					.listStyle(.inset)
 					.coordinateSpace(name: "scrollView")
-					.onAppear(){focusedIndex=0}
+					.onAppear(){
+						focusedIndex=0
+					}
 					.onPreferenceChange(VisibleItemFramePreference.self) { frames in
 						visibleItemFrames = frames
 					}
 					.onChange(of: focusedIndex) { oldIndex, newIndex in
+						
 						if let index = newIndex {
+							if index<0 || index>=filteredHistory.count { return }
 							// Check if the focused item is visible
 							// SwiftUI List only renders visible items, so if the item's frame
 							// is in the dictionary, it's currently being rendered and likely visible.
@@ -322,39 +172,48 @@ struct ClipboardHistoryView: View {
 							}
 						}
 					}
+					.onKeyPress{ keypress in
+						if keypress.modifiers.contains(.option) {
+							return handleOptionKeyPress(keypress)
+						}
+						return handleNavigationKeyPress(keypress.key)
+					}
 					
 				}
 				
-			}
-			
-			Divider()
-			
-			// Footer
-			HStack {
-				Text("\(filteredHistory.count) items")
-					.font(.caption)
-					.foregroundColor(.secondary)
+				Divider()
 				
-				Spacer()
-				
-				if selectedItem != nil {
-					Button("Paste") {
-						if let item = selectedItem {
-							pasteItem(item)
-						}
+				// Footer
+				HStack {
+					Text("\(filteredHistory.count) items")
+						.font(.caption)
+						.foregroundColor(.secondary)
+					
+					Spacer()
+					
+					Button("Clear All") {
+						showClearConfirmation()
 					}
-					.buttonStyle(.borderedProminent)
 					.controlSize(.small)
 				}
-				
-				Button("Clear All") {
-					showClearConfirmation()
-				}
-				.controlSize(.small)
+				.padding(12)
+				.background(Color(NSColor.controlBackgroundColor))
 			}
-			.padding(12)
-			.background(Color(NSColor.controlBackgroundColor))
+				
 		}
+		.onKeyPress(.escape, action: {
+			// Close the window
+				  if let window = NSApp.keyWindow {
+					  window.close()
+				  }
+				  return .handled
+			  })
+		
+	}
+	
+	private func startSearch(){
+		focusedIndex = -1
+		selectedIndex = -1
 	}
 	
 	private func pasteItem(_ item: ClipboardItem) {
@@ -372,6 +231,117 @@ struct ClipboardHistoryView: View {
 		// Use the same paste logic to copy to clipboard
 		clipboardManager.pasteContent(item)
 	}
+	
+	private func handleMoveItem(_ direction: MoveDirection, item: ClipboardItem) {
+		Task { @MainActor in
+			let moved: Int?
+			switch direction {
+			case .up:
+				moved = clipboardManager.moveItemUp(item)
+			case .down:
+				moved = clipboardManager.moveItemDown(item)
+			}
+			
+			if moved != nil {
+				updateSelection(item)
+			}
+		}
+	}
+	
+	private func updateSelection(_ item: ClipboardItem) {
+		if let newFilteredIndex = filteredHistory.firstIndex(where: { $0.id == item.id }) {
+			focusedIndex = newFilteredIndex
+			selectedIndex = newFilteredIndex
+		}
+	}
+	
+	private func handleTogglePin(_ item: ClipboardItem) {
+		Task{@MainActor in
+			if clipboardManager.togglePin(item) != nil {
+				updateSelection(item)
+			}
+		}
+		
+	}
+		
+	private func handleOptionKeyPress(_ event: KeyPress) -> KeyPress.Result {
+		
+		if self.filteredHistory.isEmpty || self.selectedIndex < 0 || self.selectedIndex >= self.filteredHistory.count {
+			return .ignored
+		}
+		
+		let item = filteredHistory[selectedIndex]
+		
+		if let char = event.characters.first,
+		   let number = Int(String(char)),
+		   number >= 0 && number <= 9,
+		   number < filteredHistory.count {
+			pasteItem(filteredHistory[number])
+			return .handled
+		}
+		
+		if event.characters.first == "s" {
+			startSearch( )
+			return .handled
+		}
+		
+		if event.characters.first == "p" {
+			handleTogglePin(item)
+			return .handled
+		}
+		
+		switch event.key {
+		case .upArrow:
+			handleMoveItem(.up, item: item)
+			return .handled
+		case .downArrow:
+			handleMoveItem( .down, item: item)
+			return .handled
+		default:
+			return .ignored
+		}
+	}
+	
+		
+	private func handleNavigationKeyPress(_ key: KeyEquivalent) -> KeyPress.Result {
+		
+		
+		if self.filteredHistory.isEmpty || self.selectedIndex < 0 || self.selectedIndex >= self.filteredHistory.count {
+			return .ignored
+		}
+		
+		let item = filteredHistory[selectedIndex]
+		
+		if key.character == "\u{8}" || key.character == "\u{7F}" {
+			Task{
+				@MainActor in
+				clipboardManager.deleteItem(item)
+			}
+			
+			return .handled
+		}
+		
+		switch key {
+		case .upArrow:
+			selectedIndex-=1
+			if selectedIndex < 0 {
+				startSearch()
+			}
+			focusedIndex = selectedIndex
+			return .handled
+		case .downArrow:
+			selectedIndex = min(filteredHistory.count - 1, selectedIndex + 1)
+			focusedIndex = selectedIndex
+			return .handled
+		case .return:
+			pasteItem(item)
+			return .handled
+		default:
+			return .ignored
+		}
+	}
+	
+	
 	
 	private func showClearConfirmation() {
 		let alert = NSAlert()
@@ -468,6 +438,87 @@ struct ClipboardItemRow: View {
 		}
 		//.background(isSelected ? Color.blue.opacity(0.1) : Color.clear)
 		.padding(.vertical, 4)
+	}
+}
+
+struct HistoryItemControlColumn: View {
+	let item: ClipboardItem
+	let isMoveUpDisabled: Bool
+	let isMoveDownDisabled: Bool
+	let onMoveUp: () -> Void
+	let onMoveDown: () -> Void
+	let onTogglePin: () -> Void
+	
+	var body: some View {
+		VStack(spacing: 2) {
+			Button(action: onMoveUp) {
+				Image(systemName: "arrow.up")
+					.font(.system(size: 10, weight: .heavy))
+			}
+			.buttonStyle(.plain)
+			.disabled(isMoveUpDisabled)
+			.foregroundColor(isMoveUpDisabled ? .gray.opacity(0.3) : .primary)
+			
+			Button(action: onTogglePin) {
+				Image(systemName: item.isPinned ? "pin.fill" : "pin")
+					.font(.system(size: 12))
+			}
+			.buttonStyle(.plain)
+			.foregroundColor(item.isPinned ? .orange : .primary)
+			
+			Button(action: onMoveDown) {
+				Image(systemName: "arrow.down")
+					.font(.system(size: 10, weight: .heavy))
+			}
+			.buttonStyle(.plain)
+			.disabled(isMoveDownDisabled)
+			.foregroundColor(isMoveDownDisabled ? .gray.opacity(0.3) : .primary)
+		}
+		.frame(width: 20)
+	}
+}
+
+struct HistoryItemContextMenu: View {
+	struct Actions {
+		let paste: () -> Void
+		let copy: () -> Void
+		let togglePin: () -> Void
+		let moveUp: () -> Void
+		let moveDown: () -> Void
+		let delete: () -> Void
+	}
+	
+	let item: ClipboardItem
+	let disablePinShortcut: Bool
+	let disableMoveUp: Bool
+	let disableMoveDown: Bool
+	let actions: Actions
+	
+	@ViewBuilder
+	var body: some View {
+		Button("Paste            ", action: actions.paste)
+		Button(action: actions.copy) {
+			HStack {
+				Text("Copy             ")
+				Spacer()
+				//Text("⌥C")
+				//.foregroundColor(.secondary) // Optional: makes the shortcut hint look standard
+			}
+		}
+		Divider()
+		Button(
+			item.isPinned ? "Unpin            " : "Pin                 ",
+			action: actions.togglePin
+		)
+		.disabled(disablePinShortcut)
+		
+		Divider()
+		Button("Move Up       (⌥↑)", action: actions.moveUp)
+			.disabled(disableMoveUp)
+		Button("Move Down  (⌥↓)", action: actions.moveDown)
+			.disabled(disableMoveDown)
+		Divider()
+		Button("Delete            (Del)", role: .destructive, action: actions.delete)
 	}
 }
 
